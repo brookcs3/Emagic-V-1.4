@@ -1,0 +1,142 @@
+# BSRoformer Phase 1 Training Config
+# All constants verified against CoreML MIL forensics of ke77nsfms3_8024.mlmodelc
+
+model:
+  dim: 256
+  depth: 12
+  heads: 8
+  dim_head: 64
+  ff_mult: 4
+  num_stems: 6
+  n_fft: 2048
+  hop_length: 512
+  segment_samples: 588800
+  mask_hidden: 1024
+  gradient_checkpointing: true
+  stem_names:
+    - bass
+    - drums
+    - other
+    - vocals
+    - guitar
+    - piano
+  band_widths:
+    # 62 bands, sum = 4100 = 1025 freq × 2 channels × 2 (real/imag)
+    # 24 bands of width 8  (low freq, high resolution)
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    - 8
+    # 12 bands of width 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    - 16
+    # 8 bands of width 48
+    - 48
+    - 48
+    - 48
+    - 48
+    - 48
+    - 48
+    - 48
+    - 48
+    # 8 bands of width 96
+    - 96
+    - 96
+    - 96
+    - 96
+    - 96
+    - 96
+    - 96
+    - 96
+    # 8 bands of width 192
+    - 192
+    - 192
+    - 192
+    - 192
+    - 192
+    - 192
+    - 192
+    - 192
+    # 2 high-freq bands
+    - 512
+    - 516
+
+training:
+  batch_size: 2              # per-GPU
+  gradient_accumulation: 8   # effective batch = 16
+  max_epochs: 200
+  seed: 42
+
+  optimizer:
+    type: adamw
+    lr: 5.0e-4
+    betas: [0.9, 0.999]
+    weight_decay: 0.01
+    eps: 1.0e-8
+
+  scheduler:
+    type: cosine
+    warmup_steps: 1000
+    min_lr: 1.0e-6
+
+  loss:
+    l1_weight: 1.0
+    mrstft_weight: 1.0
+    mrstft_resolutions:
+      - [4096, 1024, 4096]
+      - [2048, 512, 2048]
+      - [1024, 256, 1024]
+      - [512, 128, 512]
+      - [256, 64, 256]
+
+data:
+  train_dir: /path/to/train
+  val_dir: /path/to/val
+  segment_samples: 588800
+  sample_rate: 44100
+  num_workers: 8
+  pin_memory: true
+  augmentation:
+    random_gain_db: [-6, 6]
+    channel_swap_prob: 0.5
+    polarity_flip_prob: 0.5
+
+hardware:
+  precision: bf16
+  compile: false
+  gradient_checkpointing: true
+
+checkpoint:
+  save_every_n_epochs: 5
+  save_dir: ./checkpoints
+  keep_top_k: 3

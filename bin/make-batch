@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Generate batch file from folder of audio files
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+exec python3 "$REPO_DIR/tools/make_batch_file.py" "$@"

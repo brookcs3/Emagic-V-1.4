@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# CoreML stem separator - run from anywhere
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+PYTHON="$REPO_DIR/.pixi/envs/default/bin/python"
+export PYTHONPATH="$REPO_DIR:$PYTHONPATH"
+export KMP_DUPLICATE_LIB_OK=TRUE
+exec "$PYTHON" -m coreml.cli "$@"
