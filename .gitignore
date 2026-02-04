@@ -8,6 +8,10 @@ infer
 # OS
 .DS_Store
 
+# build artifacts
+dist/
+build/*.pkg
+
 # Python
 __pycache__/
 *.pyc
