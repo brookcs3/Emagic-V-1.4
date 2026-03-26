@@ -287,6 +287,7 @@ class BandSplit(nn.Module):
 
     def __init__(self, dim: int, band_widths: tuple[int, ...]):
         super().__init__()
+        self.dim = dim
         self.band_widths = band_widths
         self.norms = nn.ModuleList([RMSNorm(w) for w in band_widths])
         self.projections = nn.ModuleList([nn.Linear(w, dim) for w in band_widths])
@@ -298,11 +299,12 @@ class BandSplit(nn.Module):
         Returns:
             [B, T, num_bands, dim]
         """
-        bands = x.split(list(self.band_widths), dim=-1)
-        out = []
-        for band, norm, proj in zip(bands, self.norms, self.projections):
-            out.append(proj(norm(band)))
-        return torch.stack(out, dim=-2)  # [B, T, 62, dim]
+        B, T, _ = x.shape
+        bands = x.split(self.band_widths, dim=-1)
+        out = x.new_empty(B, T, len(self.band_widths), self.dim)
+        for i, (band, norm, proj) in enumerate(zip(bands, self.norms, self.projections)):
+            out[:, :, i, :] = proj(norm(band))
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -342,21 +344,23 @@ class MaskEstimator(nn.Module):
             [B, num_stems, T, total_freq]  where total_freq = sum(band_widths) = 4100
         """
         B, T, num_bands, D = x.shape
-        stem_masks = []
+        total_freq = sum(self.band_widths)
+        out_masks = x.new_empty(B, self.num_stems, T, total_freq)
 
-        for stem_mlps in self.estimators:
-            band_outs = []
+        # Unbind bands to avoid repeated slicing in the loop
+        bands_feat = x.unbind(2)
+
+        for s, stem_mlps in enumerate(self.estimators):
+            offset = 0
             for i, mlp in enumerate(stem_mlps):
-                band_feat = x[:, :, i, :]  # [B, T, D]
-                out = mlp(band_feat)  # [B, T, bw*2]
+                bw = self.band_widths[i]
+                out = mlp(bands_feat[i])  # [B, T, bw*2]
                 # GLU: split in half, sigmoid gate
                 a, b = out.chunk(2, dim=-1)
-                band_outs.append(a * b.sigmoid())  # [B, T, bw]
+                out_masks[:, s, :, offset : offset + bw] = a * b.sigmoid()
+                offset += bw
 
-            stem_mask = torch.cat(band_outs, dim=-1)  # [B, T, 4100]
-            stem_masks.append(stem_mask)
-
-        return torch.stack(stem_masks, dim=1)  # [B, num_stems, T, 4100]
+        return out_masks
 
 
 # ---------------------------------------------------------------------------
@@ -603,9 +607,8 @@ class BSRoformer(nn.Module):
         separated = self._apply_complex_mask(stft, masks)  # [B, 6, 2, 1025, 1151] complex
 
         # 8. iSTFT per stem
-        stems = []
+        stems = audio.new_empty(B, self.num_stems, 2, self.segment_samples)
         for s in range(self.num_stems):
-            stem_audio = self._istft(separated[:, s])  # [B, 2, T]
-            stems.append(stem_audio)
+            stems[:, s] = self._istft(separated[:, s])
 
-        return torch.stack(stems, dim=1)  # [B, 6, 2, T]
+        return stems
