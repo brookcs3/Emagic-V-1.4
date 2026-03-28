@@ -10,8 +10,20 @@ infer
 
 # build artifacts
 dist/
-build/*.pkg
+build/
+*.spec
 
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# local model symlink
+model.mlmodelc
+
+# user-specific
+songs.txt
