@@ -2,8 +2,7 @@
 """
 emagic - BSRoformer CoreML stem separator
 
-Separates stereo audio into 6 stems using Apple's compiled BSRoformer
-model (.mlmodelc) via CoreML on macOS.
+Separates stereo audio into 6 stems
 """
 
 import argparse
