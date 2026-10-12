@@ -27,7 +27,3 @@ model.mlmodelc
 
 # user-specific
 songs.txt
-
-# model weights (not distributed)
-coreml/*.mlmodelc/weights/
-pytorch/*.pt
